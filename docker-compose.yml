@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+
+  web.customized-calendar:
+    container_name: web.customized-calendar.dev
+    image: nginx:1.23.4-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./application:/app
+    networks:
+      - customized-calendar-network
+
+  api.customized-calendar:
+    container_name: api.customized-calendar.dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./application:/app
+    networks:
+      - customized-calendar-network
+
+networks:
+  customized-calendar-network:
+    driver: bridge
