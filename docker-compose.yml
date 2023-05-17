@@ -13,6 +13,8 @@ services:
       - ./application:/app
     networks:
       - customized-calendar-network
+    depends_on:
+      - api.customized-calendar
 
   api.customized-calendar:
     container_name: api.customized-calendar.dev
@@ -23,7 +25,32 @@ services:
       - ./application:/app
     networks:
       - customized-calendar-network
+    depends_on:
+      - maria-db
+
+  maria-db:
+    container_name: db.customized-calendar.dev
+    image: 'mariadb:10.11.3'
+    ports:
+      - '${FORWARD_DB_PORT:-3306}:3306'
+    env_file:
+      - ./application/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ''
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: 'tinkerlist_db'
+      MYSQL_USER: 'admin'
+      MYSQL_PASSWORD: 'secret'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    volumes:
+      - 'customized-calendar-mariadb_data:/var/lib/mysql'
+    networks:
+      - customized-calendar-network
 
 networks:
   customized-calendar-network:
     driver: bridge
+
+volumes:
+  customized-calendar-mariadb_data:
+    driver: local
