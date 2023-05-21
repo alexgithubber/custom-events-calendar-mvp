@@ -25,7 +25,7 @@ class EventResource extends JsonResource
             'location' => $this->eventDTO->location,
             'date' => $this->eventDTO->date,
             'invitees' => $this->eventDTO->invitees,
-            'created_at' => (new \DateTime($this->eventDTO->created_at))->format('d-m-Y H:i:s'),
+            'created_at' => (new \DateTime($this->eventDTO->createdAt))->format('d-m-Y H:i:s'),
         ];
     }
 }

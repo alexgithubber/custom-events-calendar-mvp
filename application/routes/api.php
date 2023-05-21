@@ -21,3 +21,5 @@ use App\Http\Controllers\EventController;
 
 
 Route::apiResource('events', EventController::class);
+
+Route::get('locations', [EventController::class, 'getLocations']);

@@ -2,8 +2,8 @@
 
 namespace App\Repositories\Eloquent;
 
-use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 abstract class AbstractEloquentRepository
 {
@@ -18,7 +18,9 @@ abstract class AbstractEloquentRepository
 
     public function findById(int $id): array
     {
-        return $this->model->findOrFail($id);
+        $model = $this->model->firstWhere('id', $id);
+
+        return $model ? $model->toArray() : [];
     }
 
     public function fetchByIds(array $ids): array
@@ -28,7 +30,7 @@ abstract class AbstractEloquentRepository
 
     public function fetchAll(?array $where = []): array
     {
-        return $this->model->all($where)->all();
+        return $this->model->where($where)->get()->all();
     }
 
     public function insert(array $data): array
@@ -36,14 +38,14 @@ abstract class AbstractEloquentRepository
         return $this->model->create($data)->toArray();
     }
 
-    public function update(int $id, array $data)
+    public function update(int $id, array $data): bool
     {
-        $this->model->where('id', $id)->update($data);
+        return $this->model->where('id', $id)->update($data);
     }
 
-    public function delete(int $id)
+    public function delete(int $id): bool
     {
-        $this->model->destroy($id);
+        return $this->model->destroy($id);
     }
 
     protected function whereIn(string $field, array $values): Collection
