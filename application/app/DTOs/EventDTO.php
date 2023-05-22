@@ -32,6 +32,11 @@ final class EventDTO implements DTOInterface
     public readonly ?array $invitees;
 
     /*
+     * The weather forecast for the event
+     */
+    public readonly ?WeatherForecastDTO $weatherForecastDTO;
+
+    /*
      * The event creation date in the database
      */
     public readonly ?string $createdAt;
@@ -49,6 +54,7 @@ final class EventDTO implements DTOInterface
         string $date = null,
         string $location = null,
         array $invitees = [],
+        WeatherForecastDTO $weatherForecastDTO = null,
         int $id = null,
         string $createdAt = null,
     ) {
@@ -56,6 +62,7 @@ final class EventDTO implements DTOInterface
         $this->date = $date;
         $this->location = $location;
         $this->invitees = $invitees;
+        $this->weatherForecastDTO = $weatherForecastDTO;
         $this->id = $id;
         $this->createdAt = $createdAt;
     }
@@ -95,6 +102,7 @@ final class EventDTO implements DTOInterface
             date: $fields['date'],
             location: $fields['location'],
             invitees: $fields['invitees'] ?? [],
+            weatherForecastDTO: $fields['weather_forecast'] ?? null,
             id: $fields['id'] ?? null,
             createdAt: $fields['created_at'] ?? null,
         );
@@ -111,6 +119,7 @@ final class EventDTO implements DTOInterface
             'date' => $this->date,
             'location' => $this->location,
             'invitees' => $this->invitees,
+            'weather_forecast' => !empty($this->weatherForecastDTO) ? $this->weatherForecastDTO->toArray() : [],
             'created_at' => $this->createdAt,
         ];
     }

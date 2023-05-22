@@ -18,9 +18,9 @@ abstract class AbstractEloquentRepository
 
     public function findById(int $id): array
     {
-        $model = $this->model->firstWhere('id', $id);
+        $queryResult = $this->model->firstWhere('id', $id);
 
-        return $model ? $model->toArray() : [];
+        return !empty($queryResult) ? $queryResult->toArray() : [];
     }
 
     public function fetchByIds(array $ids): array

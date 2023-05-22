@@ -4,48 +4,70 @@ namespace App\Services;
 
 use App\DTOs\EventDTO;
 use Illuminate\Support\Arr;
+use App\DTOs\WeatherForecastDTO;
 use Illuminate\Support\Facades\DB;
+use App\DTOs\Contracts\DTOInterface;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\RecordsNotFoundException;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\InviteesRepositoryInterface;
+use App\Services\Contracts\WeatherForecastServiceInterface;
 
 class EventService
 {
     private EventRepositoryInterface $eventRepository;
     private InviteesRepositoryInterface $inviteesRepository;
+    private WeatherForecastServiceInterface $weatherForecastService;
 
     public function __construct(
         EventRepositoryInterface $eventRepository,
-        InviteesRepositoryInterface $inviteesRepository
+        InviteesRepositoryInterface $inviteesRepository,
+        WeatherForecastServiceInterface $weatherForecastService
     ) {
         $this->eventRepository = $eventRepository;
         $this->inviteesRepository = $inviteesRepository;
+        $this->weatherForecastService = $weatherForecastService;
     }
 
     public function getById(int $id): EventDTO
     {
-        $event = $this->eventRepository->findByIdWithInvitees($id);
+        $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
 
-        if (empty($event)) {
+        if (empty($eventDatabaseRecord)) {
             throw new RecordsNotFoundException();
         }
 
-        return EventDTO::fromArray($event);
+        $weatherForecast = $this->getWeatherForecast($eventDatabaseRecord['location'], $eventDatabaseRecord['date']);
+        $fullEventData = [...$eventDatabaseRecord, 'weather_forecast' => $weatherForecast];
+
+        return EventDTO::fromArray($fullEventData);
     }
 
-    public function getAll(?array $conditions = []): array
+    public function getAll(?array $conditions = []): LengthAwarePaginator
     {
-        //TODO: interessante ter um método pra esse caso? (getAllBetween?)
         if (!empty($conditions['from']) && !empty($conditions['to'])) {
-            return $this->eventRepository->fetchEventsBetween($conditions['from'], $conditions['to']);
+            $paginatedEvents = $this->eventRepository->fetchEventsBetween($conditions['from'], $conditions['to']);
+        } else {
+            $paginatedEvents = $this->eventRepository->fetchAllEventsPaginated();
         }
 
-        return $this->eventRepository->fetchAllEventsPaginated()->toArray();
+        return $paginatedEvents->through(function ($eventModel) {
+            $weatherForecast = $this->getWeatherForecast($eventModel['location'], $eventModel['date']);
+            $fullEventData = [...$eventModel->toArray(), 'weather_forecast' => $weatherForecast];
+            return EventDTO::fromArray($fullEventData);
+        });
     }
 
-    public function fetchEventLocationsBetween(string $from, string $to)
+    public function fetchEventLocationsBetween(string $from, string $to): array
     {
-        return $this->eventRepository->fetchEventLocationsBetween($from, $to);
+        $resultSet = $this->eventRepository->fetchEventLocationsBetween($from, $to);
+
+        $eventLocations = [];
+        $eventLocations = $this->getDistinctDatesGroupedByLocation($resultSet, $eventLocations);
+
+        $this->weatherForecastService->fillLocationsWithWeatherForecasts($eventLocations);
+
+        return $eventLocations;
     }
 
     public function create(EventDTO $eventDTO): EventDTO
@@ -56,16 +78,16 @@ class EventService
             $createEventData = $eventDTO->extract();
             $invitees = Arr::pull($createEventData, 'invitees');
 
-            $createdEvent = $this->eventRepository->insert($createEventData);
+            $eventDatabaseRecord = $this->eventRepository->insert($createEventData);
 
-            $this->insertInvitees($invitees, $createdEvent['id']);
+            $this->insertInvitees($invitees, $eventDatabaseRecord['id']);
 
             //TODO: Send emails to invitees
 
             DB::commit();
 
-            $createdEvent['invitees'] = $eventDTO->invitees;
-            return EventDTO::fromArray($createdEvent);
+            $eventDatabaseRecord['invitees'] = $eventDTO->invitees;
+            return EventDTO::fromArray($eventDatabaseRecord);
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -88,12 +110,12 @@ class EventService
                 $this->updateInvitees($invitees, $id);
             }
 
-            $event = $this->eventRepository->findByIdWithInvitees($id);
+            $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
             $this->eventRepository->update($id, $updateEventData);
 
             DB::commit();
 
-            return $eventDTO::fromArray(array_merge($event, $updateEventData));
+            return $eventDTO::fromArray(array_merge($eventDatabaseRecord, $updateEventData));
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -132,5 +154,43 @@ class EventService
         }
 
         return $inviteesArr;
+    }
+
+    protected function getWeatherForecast(string $location, string $date): ?DTOInterface
+    {
+        $eventWeatherForecast = $this->weatherForecastService->getForecastByLocationAndDate($location, $date);
+
+        if (!empty($eventWeatherForecast) && is_array($eventWeatherForecast)) {
+            return WeatherForecastDTO::fromArray($eventWeatherForecast);
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns a filled array grouped by location and containing distinct event dates (repetitive dates are ignored)
+     * Reason: avoid redundant requests later on
+     */
+    protected function getDistinctDatesGroupedByLocation(array $resultSet, array $eventLocations): array
+    {
+        foreach ($resultSet as $eventModel) {
+            if (!isset($eventLocations[$eventModel->location])) {
+                $eventLocations[$eventModel->location]['dates'] = [];
+            }
+
+            $eventDate = (new \DateTime($eventModel->date))->format('Y-m-d');
+            $locationAndDateExists =
+                Arr::where($eventLocations[$eventModel->location]['dates'], function ($event) use ($eventDate) {
+                    return $event['event_date'] === $eventDate;
+                });
+
+            if (empty($locationAndDateExists)) {
+                $eventLocations[$eventModel->location]['dates'][] = [
+                    'event_date' => $eventDate,
+                ];
+            }
+        }
+
+        return $eventLocations;
     }
 }
