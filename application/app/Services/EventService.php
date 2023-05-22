@@ -2,16 +2,18 @@
 
 namespace App\Services;
 
-use App\DTOs\EventDTO;
-use Illuminate\Support\Arr;
-use App\DTOs\WeatherForecastDTO;
-use Illuminate\Support\Facades\DB;
 use App\DTOs\Contracts\DTOInterface;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Database\RecordsNotFoundException;
+use App\DTOs\EventDTO;
+use App\DTOs\WeatherForecastDTO;
+use App\Mail\EventInviteeEmail;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\InviteesRepositoryInterface;
 use App\Services\Contracts\WeatherForecastServiceInterface;
+use Illuminate\Database\RecordsNotFoundException;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class EventService
 {
@@ -75,19 +77,21 @@ class EventService
         try {
             DB::beginTransaction();
 
-            $createEventData = $eventDTO->extract();
-            $invitees = Arr::pull($createEventData, 'invitees');
+            $creationData = $eventDTO->extract();
+            $invitees = Arr::pull($creationData, 'invitees');
 
-            $eventDatabaseRecord = $this->eventRepository->insert($createEventData);
+            $eventDatabaseRecord = $this->eventRepository->insert($creationData);
 
             $this->insertInvitees($invitees, $eventDatabaseRecord['id']);
 
-            //TODO: Send emails to invitees
+            $this->sendEmailsToInvited($eventDTO);
+
+            $eventDatabaseRecord['invitees'] = $eventDTO->invitees;
+            $createdEventDTO = EventDTO::fromArray($eventDatabaseRecord);
 
             DB::commit();
 
-            $eventDatabaseRecord['invitees'] = $eventDTO->invitees;
-            return EventDTO::fromArray($eventDatabaseRecord);
+            return $createdEventDTO;
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -97,25 +101,29 @@ class EventService
 
     public function update(EventDTO $eventDTO): EventDTO
     {
-        $updateEventData = $eventDTO->extract();
-        unset($updateEventData['user_id']);
+        $updatingData = $eventDTO->extract();
+        unset($updatingData['user_id']);
 
-        $id = Arr::pull($updateEventData, 'id');
+        $id = Arr::pull($updatingData, 'id');
+        $invitees = Arr::pull($updatingData, 'invitees');
 
         try {
             DB::beginTransaction();
 
-            if (!empty($updateEventData['invitees'])) {
-                $invitees = Arr::pull($updateEventData, 'invitees');
+            $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
+            $this->eventRepository->update($id, $updatingData);
+
+            if (!empty($invitees)) {
                 $this->updateInvitees($invitees, $id);
+                $eventDatabaseRecord['invitees'] = $invitees;
             }
 
-            $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
-            $this->eventRepository->update($id, $updateEventData);
+            $updatedEventDTO = $eventDTO::fromArray(array_merge($eventDatabaseRecord, $updatingData));
+            $this->sendEmailsToInvited($updatedEventDTO, true);
 
             DB::commit();
 
-            return $eventDTO::fromArray(array_merge($eventDatabaseRecord, $updateEventData));
+            return $updatedEventDTO;
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -192,5 +200,34 @@ class EventService
         }
 
         return $eventLocations;
+    }
+
+    protected function sendEmailsToInvited(EventDTO $eventDTO, bool $eventUpdated = false): void
+    {
+        $title = 'CustomizedCalendar - Event invitation';
+        $mainText = 'You\'ve been invited for the event, see the details bellow:';
+
+        if ($eventUpdated && !empty($eventDTO->invitees)) {
+            $title .= ' (update!)';
+            $mainText = 'The event information was updated, check the changes bellow:';
+        }
+
+        foreach ($eventDTO->invitees as $to) {
+            $mailData = $this->buildMailData($title, $mainText, $eventDTO->location, $eventDTO->date);
+
+            $message = (new EventInviteeEmail($mailData))->onQueue('emails');
+
+            Mail::to($to)->queue($message);
+        }
+    }
+
+    public function buildMailData(string $title, string $mainText, string $location, string $date): array
+    {
+        return [
+            'title' => $title,
+            'main_text' => $mainText,
+            'location' => str_replace(',', ' - ', $location),
+            'event_date' => (new \DateTime($date))->format('d/m/Y H:i:s'),
+        ];
     }
 }

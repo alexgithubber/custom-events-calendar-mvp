@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventController;
 
@@ -19,7 +18,5 @@ use App\Http\Controllers\EventController;
 //    return $request->user();
 //});
 
-
 Route::apiResource('events', EventController::class);
-
 Route::get('locations', [EventController::class, 'getLocations']);
