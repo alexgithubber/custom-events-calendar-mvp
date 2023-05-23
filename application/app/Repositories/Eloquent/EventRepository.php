@@ -30,12 +30,17 @@ class EventRepository extends AbstractEloquentRepository implements EventReposit
 
     public function fetchAllEventsPaginated(): LengthAwarePaginator
     {
-        return $this->model->oldest('date')->with('invitees')->paginate(self::DEFAULT_PER_PAGE);
+        return $this->model
+            ->where('user_id', $this->getUserId())
+            ->oldest('date')
+            ->with('invitees')
+            ->paginate(self::DEFAULT_PER_PAGE);
     }
 
     public function fetchEventsBetween(string $from, string $to): LengthAwarePaginator
     {
         $results = $this->model->whereBetween('date', [$from, $to])
+            ->where('user_id', $this->getUserId())
             ->oldest('date')
             ->get();
 
@@ -60,8 +65,14 @@ class EventRepository extends AbstractEloquentRepository implements EventReposit
     public function fetchEventLocationsBetween(string $from, string $to): array
     {
         return $this->model->whereBetween('date', [$from, $to])
+            ->where('user_id', $this->getUserId())
             ->oldest('date')
             ->get()
             ->all();
+    }
+
+    protected function getUserId()
+    {
+        return auth('sanctum')->user()->id;
     }
 }

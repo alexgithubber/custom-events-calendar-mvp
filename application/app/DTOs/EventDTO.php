@@ -46,8 +46,9 @@ final class EventDTO implements DTOInterface
      * @param string|null $date
      * @param string|null $location
      * @param array $invitees
-     * @param string|null $createdAt
+     * @param WeatherForecastDTO|null $weatherForecastDTO
      * @param int|null $id
+     * @param string|null $createdAt
      */
     public function __construct(
         int $userId,
@@ -65,15 +66,6 @@ final class EventDTO implements DTOInterface
         $this->weatherForecastDTO = $weatherForecastDTO;
         $this->id = $id;
         $this->createdAt = $createdAt;
-    }
-
-    /**
-     * @param array $fields
-     * @return EventDTO
-     */
-    public static function fromCreateRequest(array $fields): EventDTO
-    {
-        return self::fromArray($fields);
     }
 
     /**

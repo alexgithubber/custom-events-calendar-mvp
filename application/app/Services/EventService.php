@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
-use App\DTOs\Contracts\DTOInterface;
 use App\DTOs\EventDTO;
-use App\DTOs\WeatherForecastDTO;
+use Illuminate\Support\Arr;
 use App\Mail\EventInviteeEmail;
+use App\DTOs\WeatherForecastDTO;
+use Illuminate\Support\Facades\DB;
+use App\DTOs\Contracts\DTOInterface;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Database\RecordsNotFoundException;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\InviteesRepositoryInterface;
 use App\Services\Contracts\WeatherForecastServiceInterface;
-use Illuminate\Database\RecordsNotFoundException;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 
 class EventService
 {
