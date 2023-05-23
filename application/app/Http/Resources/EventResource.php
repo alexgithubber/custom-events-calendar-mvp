@@ -26,7 +26,6 @@ class EventResource extends JsonResource
     {
         $response = [
             'id' => $this->eventDTO->id,
-//            'creator' =>$this->eventDTO->userName,
             'location' => $this->eventDTO->location,
             'date' => $this->eventDTO->date,
             'invitees' => $this->eventDTO->invitees,

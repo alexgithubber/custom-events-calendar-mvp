@@ -12,6 +12,8 @@ class EventInviteeModel extends Model
 
     protected $table = 'event_invitees';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'event_id',
         'email',

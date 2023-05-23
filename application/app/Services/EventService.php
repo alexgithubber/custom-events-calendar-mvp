@@ -221,7 +221,7 @@ class EventService
         }
     }
 
-    public function buildMailData(string $title, string $mainText, string $location, string $date): array
+    protected function buildMailData(string $title, string $mainText, string $location, string $date): array
     {
         return [
             'title' => $title,

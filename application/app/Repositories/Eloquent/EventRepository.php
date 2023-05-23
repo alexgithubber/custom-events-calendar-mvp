@@ -33,7 +33,9 @@ class EventRepository implements EventRepositoryInterface
 
     public function findByIdWithInvitees(int $id): array
     {
-        $queryResult = EventModel::where('id', '=', $id)->with('invitees')->first();
+        $queryResult = EventModel::where('id', '=', $id)
+            ->with('invitees:id,event_id,email')
+            ->first();
 
         return !empty($queryResult) ? $queryResult->toArray() : [];
     }
@@ -42,7 +44,7 @@ class EventRepository implements EventRepositoryInterface
     {
         return EventModel::where('user_id', $this->getUserId())
             ->oldest('date')
-            ->with('invitees')
+            ->with('invitees:id,event_id,email')
             ->paginate(self::DEFAULT_PER_PAGE);
     }
 
@@ -51,6 +53,7 @@ class EventRepository implements EventRepositoryInterface
         $results = EventModel::whereBetween('date', [$from, $to])
             ->where('user_id', $this->getUserId())
             ->oldest('date')
+            ->with('invitees:id,event_id,email')
             ->get();
 
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
