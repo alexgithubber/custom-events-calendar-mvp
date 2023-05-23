@@ -3,35 +3,44 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\EventModel;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
-use App\Repositories\Contracts\CrudRepositoryInterface;
 use App\Repositories\Contracts\EventRepositoryInterface;
-use Illuminate\Contracts\Container\BindingResolutionException;
 
-class EventRepository extends AbstractEloquentRepository implements EventRepositoryInterface, CrudRepositoryInterface
+class EventRepository implements EventRepositoryInterface
 {
     const DEFAULT_PER_PAGE = 15;
 
-    /**
-     * @throws BindingResolutionException
-     */
-    public function makeModel(): Model
+    public function insert(array $data): array
     {
-        return app()->make(EventModel::class);
+        return EventModel::create($data)->toArray();
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        return EventModel::where('id', $id)->update($data);
+    }
+
+    public function delete(int $id): bool
+    {
+        return EventModel::destroy($id);
+    }
+
+    protected function whereIn(string $field, array $values): Collection
+    {
+        return EventModel::whereIn($field, $values)->get();
     }
 
     public function findByIdWithInvitees(int $id): array
     {
-        $queryResult = $this->model->where('id', '=', $id)->with('invitees')->first();
+        $queryResult = EventModel::where('id', '=', $id)->with('invitees')->first();
 
         return !empty($queryResult) ? $queryResult->toArray() : [];
     }
 
     public function fetchAllEventsPaginated(): LengthAwarePaginator
     {
-        return $this->model
-            ->where('user_id', $this->getUserId())
+        return EventModel::where('user_id', $this->getUserId())
             ->oldest('date')
             ->with('invitees')
             ->paginate(self::DEFAULT_PER_PAGE);
@@ -39,7 +48,7 @@ class EventRepository extends AbstractEloquentRepository implements EventReposit
 
     public function fetchEventsBetween(string $from, string $to): LengthAwarePaginator
     {
-        $results = $this->model->whereBetween('date', [$from, $to])
+        $results = EventModel::whereBetween('date', [$from, $to])
             ->where('user_id', $this->getUserId())
             ->oldest('date')
             ->get();
@@ -64,7 +73,7 @@ class EventRepository extends AbstractEloquentRepository implements EventReposit
 
     public function fetchEventLocationsBetween(string $from, string $to): array
     {
-        return $this->model->whereBetween('date', [$from, $to])
+        return EventModel::whereBetween('date', [$from, $to])
             ->where('user_id', $this->getUserId())
             ->oldest('date')
             ->get()
