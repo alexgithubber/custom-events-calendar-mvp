@@ -34,6 +34,7 @@ class EventRepository implements EventRepositoryInterface
     public function findByIdWithInvitees(int $id): array
     {
         $queryResult = EventModel::where('id', '=', $id)
+            ->where('user_id', $this->getUserId())
             ->with('invitees:id,event_id,email')
             ->first();
 

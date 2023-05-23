@@ -13,16 +13,6 @@ use App\Services\WeatherForecastService;
 
 class WeatherForecastServiceTest extends TestCase
 {
-    public function setUp(): void
-    {
-        parent::setUp();
-    }
-
-    public function tearDown(): void
-    {
-        parent::tearDown();
-    }
-
     public function testCorrectlyGettingForecastByLocationAndDate()
     {
         $geoCodingResponse = '{
@@ -144,7 +134,7 @@ class WeatherForecastServiceTest extends TestCase
         $location = 'Sao Paulo,BR';
         $result = $weatherForecastService->getGeocodingByLocation($location);
 
-        $expected = ['-23.5475', '-46.63611'];
+        $expected = ['latitude' => -23.5475, 'longitude' => -46.63611];
 
         $this->assertIsArray($result);
         $this->assertEquals($expected, $result);

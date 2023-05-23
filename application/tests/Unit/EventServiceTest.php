@@ -16,22 +16,8 @@ use App\Repositories\Eloquent\EventRepository;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Repositories\Eloquent\InviteesRepository;
 
-//use Illuminate\Foundation\Testing\RefreshDatabase;
-
 class EventServiceTest extends TestCase
 {
-//    use RefreshDatabase;
-
-    public function setUp(): void
-    {
-        parent::setUp();
-    }
-
-    public function tearDown(): void
-    {
-        parent::tearDown();
-    }
-
     public function testGetById()
     {
         $repositoryResponse = [

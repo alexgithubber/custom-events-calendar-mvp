@@ -102,7 +102,6 @@ class EventService
     public function update(EventDTO $eventDTO): EventDTO
     {
         $updatingData = $eventDTO->extract();
-        unset($updatingData['user_id']);
 
         $id = Arr::pull($updatingData, 'id');
         $invitees = Arr::pull($updatingData, 'invitees');

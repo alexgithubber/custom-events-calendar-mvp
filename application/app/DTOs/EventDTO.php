@@ -9,7 +9,7 @@ final class EventDTO implements DTOInterface
     /*
      * The user that registered the event
      */
-    public readonly int $userId;
+    public readonly ?int $userId;
 
     /*
      * Event id
@@ -42,7 +42,7 @@ final class EventDTO implements DTOInterface
     public readonly ?string $createdAt;
 
     /**
-     * @param int $userId
+     * @param int|null $userId
      * @param string|null $date
      * @param string|null $location
      * @param array $invitees
@@ -51,7 +51,7 @@ final class EventDTO implements DTOInterface
      * @param string|null $createdAt
      */
     public function __construct(
-        int $userId,
+        int $userId = null,
         string $date = null,
         string $location = null,
         array $invitees = [],
@@ -75,7 +75,7 @@ final class EventDTO implements DTOInterface
     public static function fromUpdateRequest(array $fields): EventDTO
     {
         return new self(
-            userId: $fields['user_id'],
+            userId: $fields['user_id'] ?? null,
             date: $fields['date'] ?? null,
             location: $fields['location'] ?? null,
             invitees: $fields['invitees'] ?? [],

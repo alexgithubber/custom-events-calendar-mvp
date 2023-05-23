@@ -103,7 +103,7 @@ class EventController extends Controller
     public function update(EventUpdateRequest $request, string $id): JsonResponse
     {
         try {
-            $inputFields = array_merge($request->validated(), ['user_id' => '1', 'id' => $id]);
+            $inputFields = array_merge($request->validated(), ['id' => $id]);
 
             $eventDTO = EventDTO::fromUpdateRequest($inputFields);
             $updatedEventDTO = $this->eventService->update($eventDTO);

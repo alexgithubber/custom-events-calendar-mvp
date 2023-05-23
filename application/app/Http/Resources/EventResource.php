@@ -27,9 +27,9 @@ class EventResource extends JsonResource
         $response = [
             'id' => $this->eventDTO->id,
             'location' => $this->eventDTO->location,
-            'date' => $this->eventDTO->date,
+            'date' => (new \DateTime($this->eventDTO->date))->format('Y-m-d H:i'),
             'invitees' => $this->eventDTO->invitees,
-            'created_at' => (new \DateTime($this->eventDTO->createdAt))->format('d-m-Y H:i:s'),
+            'created_at' => (new \DateTime($this->eventDTO->createdAt))->format('Y-m-d H:i:s'),
         ];
 
         if ($request->getMethod() === RequestAlias::METHOD_GET) {
