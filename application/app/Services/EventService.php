@@ -53,6 +53,10 @@ class EventService
             $paginatedEvents = $this->eventRepository->fetchAllEventsPaginated();
         }
 
+        /**
+         * Fetching and adding the weather forecast to every element of the paginated collection
+         * @returns LengthAwarePaginator
+         */
         return $paginatedEvents->through(function ($eventModel) {
             $weatherForecast = $this->getWeatherForecast($eventModel['location'], $eventModel['date']);
             $fullEventData = [...$eventModel->toArray(), 'weather_forecast' => $weatherForecast];
@@ -110,12 +114,20 @@ class EventService
             DB::beginTransaction();
 
             $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
+
+            if (empty($eventDatabaseRecord)) {
+                throw new RecordsNotFoundException();
+            }
+
             $this->eventRepository->update($id, $updatingData);
 
             if (!empty($invitees)) {
                 $this->updateInvitees($invitees, $id);
-                $eventDatabaseRecord['invitees'] = $invitees;
             }
+
+            $eventDatabaseRecord['invitees'] = array_map(function ($element) {
+                return $element['email'];
+            }, $eventDatabaseRecord['invitees']);
 
             $updatedEventDTO = $eventDTO::fromArray(array_merge($eventDatabaseRecord, $updatingData));
             $this->sendEmailsToInvited($updatedEventDTO, true);
@@ -143,6 +155,9 @@ class EventService
         $this->inviteesRepository->insertMany($inviteesPersistanceData);
     }
 
+    /**
+     * Erases all invitees of the event and recreate them
+     */
     protected function updateInvitees(array $invitees, int $id): void
     {
         $inviteesPersistanceData = $this->getPreparedForPersistanceInvitees($invitees, $id);

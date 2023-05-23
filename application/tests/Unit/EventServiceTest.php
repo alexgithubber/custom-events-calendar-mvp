@@ -194,8 +194,12 @@ class EventServiceTest extends TestCase
                 'date' => '2023-06-01 10:00:00',
                 'created_at' => '2023-06-01 10:00:00',
                 'invitees' => [
-                    'example@test.com',
-                    'tester@test.com',
+                    [
+                        'id' => 1,
+                        'event_id' => 10,
+                        'email' => 'example@test.com',
+                        'created_at' => '2023-05-23 10:00:00',
+                    ],
                 ],
             ];
 

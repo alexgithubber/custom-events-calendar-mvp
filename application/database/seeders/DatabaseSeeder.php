@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             DB::beginTransaction();
 
             User::factory(1)->create();
-            $generatedEvents = EventModel::factory(5)->create()->toArray();
+            $generatedEvents = EventModel::factory(10)->create()->toArray();
 
             foreach ($generatedEvents as $generatedEvent) {
                 EventInviteeModel::factory(3)->create(['event_id' => $generatedEvent['id']]);
