@@ -144,9 +144,13 @@ class EventService
 
     public function delete(int $id): bool
     {
-        $this->eventRepository->delete($id);
+        $event = $this->eventRepository->findById($id);
 
-        return true;
+        if (empty($event)) {
+            throw new RecordsNotFoundException();
+        }
+
+        return $this->eventRepository->delete($id);
     }
 
     protected function insertInvitees(array $invitees, int $id): void

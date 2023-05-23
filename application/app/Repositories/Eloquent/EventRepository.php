@@ -11,6 +11,15 @@ class EventRepository implements EventRepositoryInterface
 {
     const DEFAULT_PER_PAGE = 15;
 
+    public function findById(int $id): array|null
+    {
+        $queryResult = EventModel::where('id', $id)
+            ->where('user_id', $this->getUserId())
+            ->first();
+
+        return !empty($queryResult) ? $queryResult->toArray() : [];
+    }
+
     public function insert(array $data): array
     {
         return EventModel::create($data)->toArray();
@@ -18,12 +27,16 @@ class EventRepository implements EventRepositoryInterface
 
     public function update(int $id, array $data): bool
     {
-        return EventModel::where('id', $id)->update($data);
+        return EventModel::where('id', $id)
+            ->where('user_id', $this->getUserId())
+            ->update($data);
     }
 
     public function delete(int $id): bool
     {
-        return EventModel::destroy($id);
+        return EventModel::where('id', $id)
+            ->where('user_id', $this->getUserId())
+            ->delete();
     }
 
     protected function whereIn(string $field, array $values): Collection

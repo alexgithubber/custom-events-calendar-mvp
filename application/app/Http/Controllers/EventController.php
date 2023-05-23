@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\EventDTO;
-use Illuminate\Http\Request;
-use App\Services\EventService;
-use Illuminate\Http\JsonResponse;
-use App\Http\Resources\EventResource;
 use App\Http\Requests\EventCreateRequest;
 use App\Http\Requests\EventUpdateRequest;
+use App\Http\Resources\EventResource;
+use App\Services\EventService;
 use Illuminate\Database\RecordsNotFoundException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 
 class EventController extends Controller
@@ -42,7 +43,14 @@ class EventController extends Controller
             $from = $request->query('from');
             $to = $request->query('to');
 
-            $events = $this->eventService->fetchEventLocationsBetween($from, $to);
+            if ($from && $to) {
+                $events = $this->eventService->fetchEventLocationsBetween($from, $to);
+            } else {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => "The params 'from' and 'to' are required",
+                ], ResponseAlias::HTTP_INTERNAL_SERVER_ERROR);
+            }
 
             return response()->json($events, ResponseAlias::HTTP_OK);
         } catch (\Throwable $exception) {
