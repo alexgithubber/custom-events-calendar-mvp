@@ -1,6 +1,6 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventController;
 
@@ -15,11 +15,10 @@ use App\Http\Controllers\EventController;
 |
 */
 
-//Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-//    return $request->user();
-//});
+Route::controller(AuthController::class)->group(function(){
+    Route::post('users', 'store');
+    Route::post('login', 'login');
+});
 
-
-Route::apiResource('events', EventController::class);
-
-Route::get('locations', [EventController::class, 'getLocations']);
+Route::apiResource('events', EventController::class)->middleware('auth:sanctum');
+Route::get('locations', [EventController::class, 'getLocations'])->middleware('auth:sanctum');

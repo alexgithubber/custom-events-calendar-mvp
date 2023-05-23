@@ -2,8 +2,8 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Repositories\Contracts\InviteesRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use App\Repositories\Contracts\InviteesRepositoryInterface;
 
 class InviteesRepository implements InviteesRepositoryInterface
 {

@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\EventDTO;
-use Illuminate\Http\Request;
-use App\Services\EventService;
-use Illuminate\Http\JsonResponse;
-use App\Http\Resources\EventResource;
 use App\Http\Requests\EventCreateRequest;
 use App\Http\Requests\EventUpdateRequest;
+use App\Http\Resources\EventResource;
+use App\Services\EventService;
 use Illuminate\Database\RecordsNotFoundException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response as ResponseAlias;
 
 class EventController extends Controller
@@ -23,21 +24,41 @@ class EventController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $events = $this->eventService->getAll($request->query());
+        try {
+            $events = $this->eventService->getAll($request->query());
 
-        return response()->json([
-            EventResource::collection($events)->response()->getData(true),
-        ], ResponseAlias::HTTP_OK);
+            return response()->json(EventResource::collection($events)->response()->getData(true),
+                ResponseAlias::HTTP_OK);
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => "Could not get events",
+            ], ResponseAlias::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     public function getLocations(Request $request): JsonResponse
     {
-        $from = $request->query('from');
-        $to = $request->query('to');
+        try {
+            $from = $request->query('from');
+            $to = $request->query('to');
 
-        $events = $this->eventService->fetchEventLocationsBetween($from, $to);
+            if ($from && $to) {
+                $events = $this->eventService->fetchEventLocationsBetween($from, $to);
+            } else {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => "The params 'from' and 'to' are required",
+                ], ResponseAlias::HTTP_INTERNAL_SERVER_ERROR);
+            }
 
-        return response()->json($events, ResponseAlias::HTTP_OK);
+            return response()->json($events, ResponseAlias::HTTP_OK);
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => "Could not get locations",
+            ], ResponseAlias::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     public function store(EventCreateRequest $request): JsonResponse
@@ -45,10 +66,8 @@ class EventController extends Controller
         try {
             $validatedInput = $request->validated();
 
-            $userId = 1;
-
             $eventDTO = new EventDTO(
-                $userId,
+                auth('sanctum')->user()->id,
                 $validatedInput['date'],
                 $validatedInput['location'],
                 $validatedInput['invitees']
@@ -61,7 +80,6 @@ class EventController extends Controller
                 'event' => new EventResource($createdEventDTO),
             ], ResponseAlias::HTTP_CREATED);
         } catch (\Throwable $exception) {
-//            print($exception->getMessage());die;
             return response()->json([
                 'status' => 'failed',
                 'message' => "Could not create event",
@@ -93,7 +111,7 @@ class EventController extends Controller
     public function update(EventUpdateRequest $request, string $id): JsonResponse
     {
         try {
-            $inputFields = array_merge($request->validated(), ['user_id' => '1', 'id' => $id]);
+            $inputFields = array_merge($request->validated(), ['id' => $id]);
 
             $eventDTO = EventDTO::fromUpdateRequest($inputFields);
             $updatedEventDTO = $this->eventService->update($eventDTO);

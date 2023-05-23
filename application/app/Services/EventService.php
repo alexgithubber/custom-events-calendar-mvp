@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\DTOs\EventDTO;
 use Illuminate\Support\Arr;
+use App\Mail\EventInviteeEmail;
 use App\DTOs\WeatherForecastDTO;
 use Illuminate\Support\Facades\DB;
 use App\DTOs\Contracts\DTOInterface;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\RecordsNotFoundException;
 use App\Repositories\Contracts\EventRepositoryInterface;
@@ -51,6 +53,10 @@ class EventService
             $paginatedEvents = $this->eventRepository->fetchAllEventsPaginated();
         }
 
+        /**
+         * Fetching and adding the weather forecast to every element of the paginated collection
+         * @returns LengthAwarePaginator
+         */
         return $paginatedEvents->through(function ($eventModel) {
             $weatherForecast = $this->getWeatherForecast($eventModel['location'], $eventModel['date']);
             $fullEventData = [...$eventModel->toArray(), 'weather_forecast' => $weatherForecast];
@@ -75,19 +81,21 @@ class EventService
         try {
             DB::beginTransaction();
 
-            $createEventData = $eventDTO->extract();
-            $invitees = Arr::pull($createEventData, 'invitees');
+            $creationData = $eventDTO->extract();
+            $invitees = Arr::pull($creationData, 'invitees');
 
-            $eventDatabaseRecord = $this->eventRepository->insert($createEventData);
+            $eventDatabaseRecord = $this->eventRepository->insert($creationData);
 
             $this->insertInvitees($invitees, $eventDatabaseRecord['id']);
 
-            //TODO: Send emails to invitees
+            $this->sendEmailsToInvited($eventDTO);
+
+            $eventDatabaseRecord['invitees'] = $eventDTO->invitees;
+            $createdEventDTO = EventDTO::fromArray($eventDatabaseRecord);
 
             DB::commit();
 
-            $eventDatabaseRecord['invitees'] = $eventDTO->invitees;
-            return EventDTO::fromArray($eventDatabaseRecord);
+            return $createdEventDTO;
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -97,25 +105,36 @@ class EventService
 
     public function update(EventDTO $eventDTO): EventDTO
     {
-        $updateEventData = $eventDTO->extract();
-        unset($updateEventData['user_id']);
+        $updatingData = $eventDTO->extract();
 
-        $id = Arr::pull($updateEventData, 'id');
+        $id = Arr::pull($updatingData, 'id');
+        $invitees = Arr::pull($updatingData, 'invitees');
 
         try {
             DB::beginTransaction();
 
-            if (!empty($updateEventData['invitees'])) {
-                $invitees = Arr::pull($updateEventData, 'invitees');
+            $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
+
+            if (empty($eventDatabaseRecord)) {
+                throw new RecordsNotFoundException();
+            }
+
+            $this->eventRepository->update($id, $updatingData);
+
+            if (!empty($invitees)) {
                 $this->updateInvitees($invitees, $id);
             }
 
-            $eventDatabaseRecord = $this->eventRepository->findByIdWithInvitees($id);
-            $this->eventRepository->update($id, $updateEventData);
+            $eventDatabaseRecord['invitees'] = array_map(function ($element) {
+                return $element['email'];
+            }, $eventDatabaseRecord['invitees']);
+
+            $updatedEventDTO = $eventDTO::fromArray(array_merge($eventDatabaseRecord, $updatingData));
+            $this->sendEmailsToInvited($updatedEventDTO, true);
 
             DB::commit();
 
-            return $eventDTO::fromArray(array_merge($eventDatabaseRecord, $updateEventData));
+            return $updatedEventDTO;
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -125,9 +144,13 @@ class EventService
 
     public function delete(int $id): bool
     {
-        $this->eventRepository->delete($id);
+        $event = $this->eventRepository->findById($id);
 
-        return true;
+        if (empty($event)) {
+            throw new RecordsNotFoundException();
+        }
+
+        return $this->eventRepository->delete($id);
     }
 
     protected function insertInvitees(array $invitees, int $id): void
@@ -136,6 +159,9 @@ class EventService
         $this->inviteesRepository->insertMany($inviteesPersistanceData);
     }
 
+    /**
+     * Erases all invitees of the event and recreate them
+     */
     protected function updateInvitees(array $invitees, int $id): void
     {
         $inviteesPersistanceData = $this->getPreparedForPersistanceInvitees($invitees, $id);
@@ -192,5 +218,34 @@ class EventService
         }
 
         return $eventLocations;
+    }
+
+    protected function sendEmailsToInvited(EventDTO $eventDTO, bool $eventUpdated = false): void
+    {
+        $title = 'CustomizedCalendar - Event invitation';
+        $mainText = 'You\'ve been invited for the event, see the details bellow:';
+
+        if ($eventUpdated && !empty($eventDTO->invitees)) {
+            $title .= ' (update!)';
+            $mainText = 'The event information was updated, check the changes bellow:';
+        }
+
+        foreach ($eventDTO->invitees as $to) {
+            $mailData = $this->buildMailData($title, $mainText, $eventDTO->location, $eventDTO->date);
+
+            $message = (new EventInviteeEmail($mailData))->onQueue('emails');
+
+            Mail::to($to)->queue($message);
+        }
+    }
+
+    protected function buildMailData(string $title, string $mainText, string $location, string $date): array
+    {
+        return [
+            'title' => $title,
+            'main_text' => $mainText,
+            'location' => str_replace(',', ' - ', $location),
+            'event_date' => (new \DateTime($date))->format('d/m/Y H:i:s'),
+        ];
     }
 }

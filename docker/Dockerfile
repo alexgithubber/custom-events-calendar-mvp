@@ -21,7 +21,6 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 #RUN composer install --no-scripts --no-autoloader
 
-# Copy the rest of the application code to the container
 COPY . .
 
 EXPOSE 9000

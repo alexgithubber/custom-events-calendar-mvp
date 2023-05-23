@@ -3,7 +3,11 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
+use App\Models\EventModel;
 use Illuminate\Database\Seeder;
+use App\Models\EventInviteeModel;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -12,11 +16,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        try {
+            DB::beginTransaction();
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+            User::factory(1)->create();
+            $generatedEvents = EventModel::factory(10)->create()->toArray();
+
+            foreach ($generatedEvents as $generatedEvent) {
+                EventInviteeModel::factory(3)->create(['event_id' => $generatedEvent['id']]);
+            }
+
+            DB::commit();
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+
+            throw $exception;
+        }
     }
 }

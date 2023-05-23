@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Services\EventService;
 use Illuminate\Support\ServiceProvider;
 use App\Repositories\Eloquent\EventRepository;
 use App\Repositories\Eloquent\InviteesRepository;
@@ -16,12 +15,6 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-//        $this->app->when(EventService::class)
-//            ->needs(EventRepositoryInterface::class)
-//            ->give(function () {
-//                return new EventRepository();
-//            });
-
         $this->app->bindIf(EventRepositoryInterface::class, EventRepository::class);
         $this->app->bindIf(InviteesRepositoryInterface::class, InviteesRepository::class);
     }
