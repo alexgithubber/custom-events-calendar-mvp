@@ -12,18 +12,19 @@ Build the project
 
 Install the dependencies
 
-    docker exec -it api.customized-calendar.dev bash -c "composer install"
+    docker exec -it api.customized-calendar.dev sh -c "composer install"
 
 Run migrations
 
-    docker exec -it api.customized-calendar.dev bash -c "php artisan migrate"
+    docker exec -it api.customized-calendar.dev sh -c "php artisan migrate"
 
 Seed the database
 
-    docker exec -it api.customized-calendar.dev bash -c "php artisan db:seed"
+    docker exec -it api.customized-calendar.dev sh -c "php artisan db:seed"
 
 At this point, the project should be up and running at http://localhost:8080/
 
+> Now you can check the `users` table and pick up one email to login in the `http://localhost:8080/api/login` endpoint, the password is `password`
 
 For the sending of emails, start the email worker
     
@@ -40,7 +41,7 @@ If you're using a different one, besides the other MAIL fields, you need to chan
 
 Executing tests
 
-    docker exec -it api.customized-calendar.dev bash -c "php ./vendor/bin/phpunit"
+    docker exec -it api.customized-calendar.dev sh -c "php ./vendor/bin/phpunit"
 
 
 
