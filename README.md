@@ -6,6 +6,10 @@
 
 The project was developed with Docker, to setup the application, execute the following:
 
+In the application directory, generate the .env file from the .env.example
+
+    cp .env.example .env
+
 Build the project
 
     docker-compose up -d
