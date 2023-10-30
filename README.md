@@ -1,6 +1,8 @@
-# TinkerList Customized Calendar
+# Events Calendar API with Weather
 
+This is a small project that allows you to register events with their respective locations and dates, you get information about the weather forecast for such events when you retrieve them.
 
+Obs: There may not be a forecast for dates 15 days ahead due to limitations in the Weather API free tier model.
 
 ## Setup
 
@@ -334,12 +336,10 @@ reponse
 
 - Fetching the weather forecast for every event whenever it is listed is certainly not a viable approach outside development environment, ideally we would have some caching system in the middle, 
 only updating the cache in certain intervals and only for the fetched events. This single change would drastically decrease the endpoint response time while allowing us to deal with the forecast service downtimes.
-For this we could use Amazon ElastiCache.
 
 
-- Geocoding: another point of improvement is the need to get the coordinates for the city in every weather request. Since these values are fixed, it wouldn't be a problem to save them in the cache as well or even in a dedicated table in the database, and only querying new coordinates for locations never before used in the system. On top of this, we could persist the coordinates along with event itself, being another column in the events table, this way we would be virtually eliminating the need to get the coordinates for simple listings and querying the remote API would a last resort.  
+- Geocoding: another point of improvement is the need to get the coordinates for the city in every weather request. Since these values are fixed, it wouldn't be a problem to save them in the cache as well (like Redis) or even in a dedicated table in the database, and only querying new coordinates for locations never before used in the system. On top of this, we could persist the coordinates along with event itself, being another column in the events table, this way we would be virtually eliminating the need to get the coordinates for simple listings and only querying the remote API as a last resort.  
 
 
 - Sending e-mails: for a production environment we could use Amazon SQS to keep the email queues. A few improvements to the code here would be to log every failed e-mail and monitoring with some tool like new relic, grafana, etc.. maybe triggering events and, of course, dealing with the failed jobs retry. Using Laravel events and listeners could be another improvement here, this would not only clean up the code, but would allow us to centralize common code for the send and formatting of emails that could be used whenever any part of the system needs to send e-mails, following the DRY principle.
 
-> If for any case you faced problems to test the project let me know, e-mail me at: alexviana-i@hotmail.com
