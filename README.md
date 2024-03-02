@@ -332,14 +332,3 @@ reponse
 }
 ```
 
-### Considerations
-
-- Fetching the weather forecast for every event whenever it is listed is certainly not a viable approach outside development environment, ideally we would have some caching system in the middle, 
-only updating the cache in certain intervals and only for the fetched events. This single change would drastically decrease the endpoint response time while allowing us to deal with the forecast service downtimes.
-
-
-- Geocoding: another point of improvement is the need to get the coordinates for the city in every weather request. Since these values are fixed, it wouldn't be a problem to save them in the cache as well (like Redis) or even in a dedicated table in the database, and only querying new coordinates for locations never before used in the system. On top of this, we could persist the coordinates along with event itself, being another column in the events table, this way we would be virtually eliminating the need to get the coordinates for simple listings and only querying the remote API as a last resort.  
-
-
-- Sending e-mails: for a production environment we could use Amazon SQS to keep the email queues. A few improvements to the code here would be to log every failed e-mail and monitoring with some tool like new relic, grafana, etc.. maybe triggering events and, of course, dealing with the failed jobs retry. Using Laravel events and listeners could be another improvement here, this would not only clean up the code, but would allow us to centralize common code for the send and formatting of emails that could be used whenever any part of the system needs to send e-mails, following the DRY principle.
-
